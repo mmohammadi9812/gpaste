@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GPaste</title>
+  <link rel="stylesheet" type="text/css" href="styles.css" />
+</head>
+
+<body>
+<header>
+  <h1>Pastebin</h1>
+  <nav>
+    <ul>
+      <li><a href="#">Home</a></li>
+      <li><a href="#">Sign Up</a></li>
+      <li><a href="#">Log In</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <h2>New Paste</h2>
+
+  <form action="/create" method="post">
+    <label for="paste-text">Paste:</label>
+    <textarea name="text" id="paste-text" autocomplete="off"></textarea>
+
+    <button id="submit-paste">Submit</button>
+  </form>
+</main>
+
+</body>
+
+</html>

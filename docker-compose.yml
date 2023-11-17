@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  cassandra:
+    image: docker.io/bitnami/cassandra:4.1
+    container_name: cassandra
+    ports:
+      - "7000:7000"
+      - "9042:9042"
+    environment:
+      - CASSANDRA_SEEDS=cassandra,cassandra2
+      - CASSANDRA_CLUSTER_NAME=cassandra-cluster
+      - CASSANDRA_PASSWORD=cassandra
+      # By default, Cassandra autodetects the available host memory and takes as much as it can.
+      # Therefore, memory options are mandatory if multiple Cassandras are launched in the same node.
+      - MAX_HEAP_SIZE=1G
+      - HEAP_NEWSIZE=200M
+    volumes:
+      - ./scripts/init-db.cql:/scripts/init-db.cql
+      - ./data/cassandra1/:/bitnami/:rw
+
+  cassandra2:
+    image: docker.io/bitnami/cassandra:4.1
+    container_name: cassandra2
+    ports:
+      - "7001:7000"
+      - "9043:9042"
+    environment:
+      - CASSANDRA_SEEDS=cassandra,cassandra2
+      - CASSANDRA_CLUSTER_NAME=cassandra-cluster
+      - CASSANDRA_PASSWORD=cassandra
+      # By default, Cassandra autodetects the available host memory and takes as much as it can.
+      # Therefore, memory options are mandatory if multiple Cassandras are launched in the same node.
+      - MAX_HEAP_SIZE=800M
+      - HEAP_NEWSIZE=200M
+    depends_on:
+      cassandra:
+        condition: service_completed_successfully
+    volumes:
+      - ./data/cassandra2/:/bitnami/:rw
+
+  redis:
+    image: bitnami/redis:7.2
+    container_name: redis
+    command: redis-server --save 20 1 --loglevel warning --protected-mode no
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis/:/bitnami/redis/data/:rw
