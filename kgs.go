@@ -2,12 +2,13 @@ package main
 
 import (
 	"errors"
-	"github.com/dgraph-io/ristretto"
-	"github.com/gocql/gocql"
 	"log"
 	"math/rand"
 	"slices"
 	"strings"
+
+	"github.com/dgraph-io/ristretto"
+	"github.com/gocql/gocql"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 
 type KGS struct {
 	cluster *gocql.ClusterConfig
-	session *gocql.Session
+	Session *gocql.Session
 	cache   *ristretto.Cache
 
 	lastPrefix string
@@ -33,7 +34,8 @@ func (k *KGS) Init() {
 	}
 	k.cluster.Keyspace = "paste"
 	k.cluster.Consistency = gocql.One
-	k.session, err = k.cluster.CreateSession()
+	// FIXME: takes a long time, bottleneck
+	k.Session, err = k.cluster.CreateSession()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,16 +53,8 @@ func (k *KGS) Init() {
 }
 
 func (k *KGS) Close() {
-	k.session.Close()
+	k.Session.Close()
 	k.cache.Close()
-}
-
-func (k *KGS) CQuery(stmt string, values ...interface{}) error {
-	if k.session.Closed() {
-		return errors.New("current session is closed")
-	}
-
-	return k.session.Query(stmt, values...).Exec()
 }
 
 // GenerateKeyRange generates random key prefix
@@ -72,7 +66,7 @@ func (k *KGS) GenerateKeyRange() (string, gocql.UUID, error) {
 
 	// Insert key range and lock row
 	id := gocql.MustRandomUUID()
-	err := k.session.Query("INSERT INTO key_ranges (id, prefix, used) VALUES (?, ?, false)",
+	err := k.Session.Query("INSERT INTO paste.KeyRanges (id, prefix, used) VALUES (?, ?, false)",
 		id, prefix.String()).Exec()
 	if err != nil {
 		return "", gocql.UUID{}, err
@@ -87,11 +81,11 @@ func (k *KGS) GetKey() (string, error) {
 	keys, ok := k.cache.Get(k.lastPrefix)
 	if !ok || len(keys.([]string)) == 64 {
 		var (
-			id gocql.UUID
+			id     gocql.UUID
 			prefix string
 		)
 
-		err := k.session.Query("SELECT id, prefix FROM key_ranges WHERE used = false LIMIT 1 ALLOW FILTERING;").Scan(&id, &prefix)
+		err := k.Session.Query("SELECT id, prefix FROM paste.KeyRanges WHERE used = false LIMIT 1 ALLOW FILTERING;").Scan(&id, &prefix)
 		if err != nil {
 			if errors.Is(err, gocql.ErrNotFound) {
 				// Generate new key range
@@ -108,7 +102,7 @@ func (k *KGS) GetKey() (string, error) {
 		keys = make([]string, 1)
 
 		// Mark key range as used
-		err = k.session.Query("UPDATE key_ranges SET used = true WHERE id = ?", id.String()).Exec()
+		err = k.Session.Query("UPDATE paste.KeyRanges SET used = true WHERE id = ?", id.String()).Exec()
 		if err != nil {
 			return "", err
 		}

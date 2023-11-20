@@ -1,14 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gocql/gocql"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/ratelimit"
 )
 
 const (
@@ -16,20 +14,40 @@ const (
 	PasteImage
 )
 
+const RateLimit = 25
+
 type Form struct {
 	Text string `form:"text"`
 }
 
+var (
+	kgs KGS
+	rdb *redis.Client
+	limit ratelimit.Limiter
+)
+
+func leakBucket() gin.HandlerFunc {
+	prev := time.Now()
+	return func(ctx *gin.Context) {
+		now := limit.Take()
+		log.Printf("%v", now.Sub(prev))
+		prev = now
+	}
+}
+
 func main() {
-	rdb := redis.NewClient(&redis.Options{
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
+	rdb = redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
 		DB:       0,
 	})
 
-	var kgs KGS
 	kgs.Init()
 	defer kgs.Close()
+
+	limit = ratelimit.New(RateLimit)
 
 	r := gin.Default()
 	r.LoadHTMLGlob("web/*") // Load html files
@@ -43,36 +61,24 @@ func main() {
 
 	// serve static files (for now, it's only css)
 	r.StaticFile("/styles.css", "./web/styles.css")
+	r.StaticFile("/text-paste.css", "./web/text-paste.css")
+	r.StaticFile("/favicon.ico", "./web/favicon.ico")
+
+	// we don't need extra slashes
+	r.RemoveExtraSlash = true
+
+	r.GET("/error.html", ErrorHandler)
 
 	// controller paths
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
-	})
-	r.POST("/create", func(c *gin.Context) {
-		fmt.Println("/create post 1st line")
-		var f Form
-		if err := c.Bind(&f); err != nil {
-			c.Redirect(http.StatusFound, "/error.html")
-		}
+	r.GET("/", IndexHandler)
+	api := r.Group("/api")
+	{
+		api.Use(leakBucket())
+		api.POST("/create", CreateHandler)
+	}
 
-		key, err := kgs.GetKey()
-		if err != nil {
-			log.Fatal(err)
-		}
+	r.GET("/:key", KeyHandler)
 
-		err = rdb.Set(c, key, f.Text, 0).Err()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		go (func() {
-			err = kgs.CQuery("INSERT INTO paste.Paste (id, ptype, ptext, s3_url, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-				gocql.MustRandomUUID(), PasteText, f.Text, nil, nil, time.Now().Unix(), time.Now().Unix())
-			if err != nil {
-				log.Fatal(err)
-			}
-		})()
-	})
 	if err = r.Run(":3000"); err != nil {
 		log.Fatal(err)
 	}

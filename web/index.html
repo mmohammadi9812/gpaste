@@ -9,28 +9,27 @@
 </head>
 
 <body>
-<header>
-  <h1>Pastebin</h1>
-  <nav>
-    <ul>
-      <li><a href="#">Home</a></li>
-      <li><a href="#">Sign Up</a></li>
-      <li><a href="#">Log In</a></li>
-    </ul>
-  </nav>
-</header>
+  <header>
+    <h1>Pastebin</h1>
+    <nav>
+      <ul>
+        <li><a href="#">Home</a></li>
+        <li><a href="#">Sign Up</a></li>
+        <li><a href="#">Log In</a></li>
+      </ul>
+    </nav>
+  </header>
 
-<main>
-  <h2>New Paste</h2>
+  <main>
+    <h2>New Paste</h2>
 
-  <form action="/create" method="post">
-    <label for="paste-text">Paste:</label>
-    <textarea name="text" id="paste-text" autocomplete="off"></textarea>
+    <form action="/api/create" method="post">
+      <label for="paste-text">Paste:</label>
+      <textarea name="text" id="paste-text" autocomplete="off"></textarea>
 
-    <button id="submit-paste">Submit</button>
-  </form>
-</main>
-
+      <button id="submit-paste">Submit</button>
+    </form>
+  </main>
 </body>
 
 </html>
