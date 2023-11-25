@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"math/rand"
+	"os"
 	"slices"
 	"strings"
 
@@ -33,8 +34,8 @@ func (k *KGS) Init() {
 		Password: "cassandra",
 	}
 	k.cluster.Keyspace = "paste"
-	k.cluster.Consistency = gocql.One
-	// FIXME: takes a long time, bottleneck
+	k.cluster.Consistency = gocql.Quorum
+
 	k.Session, err = k.cluster.CreateSession()
 	if err != nil {
 		log.Fatal(err)
@@ -50,11 +51,14 @@ func (k *KGS) Init() {
 	}
 
 	k.lastPrefix = ""
+	log.Println("Key generation service started ...")
 }
 
 func (k *KGS) Close() {
+	log.Println("Closing key generation service ...")
 	k.Session.Close()
 	k.cache.Close()
+	os.Exit(0)
 }
 
 // GenerateKeyRange generates random key prefix

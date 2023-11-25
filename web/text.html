@@ -1,32 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
+{{ template "top" . }}
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{- .key -}}</title>
-    <link rel="stylesheet" type="text/css" href="text-paste.css" />
-</head>
+{{ define "title" }} {{- .key -}} {{ end }}
 
-<body>
-    <header>
-        <h1>Pastebin</h1>
-        <nav>
-          <ul>
-            <li><a href="#">Home</a></li>
-            <li><a href="#">Sign Up</a></li>
-            <li><a href="#">Log In</a></li>
-          </ul>
-        </nav>
-      </header>
+{{ define "css" }}
+  <link rel="stylesheet" type="text/css" href="/text-paste.css" />
+{{ end }}
 
-    <main>
-        <pre id="paste-content">
+{{ define "body" }}
+<main>
+  <pre id="paste-content">
           {{- .content -}}
         </pre>
 
-        <div id="paste-details">
-            <p>Posted by <b>{{- .username -}}</b> on <i>{{ .date }}</i></p>
-        </div>
-    </main>
-</body>
+  <div id="paste-details">
+    <p>Posted by <b>{{- .username -}}</b> on <i>{{ .date }}</i></p>
+  </div>
+</main>
+{{ end }}

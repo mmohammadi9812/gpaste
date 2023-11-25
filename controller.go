@@ -12,11 +12,25 @@ import (
 )
 
 func IndexHandler(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "index.html", nil)
+	ctx.HTML(http.StatusOK, "index", nil)
 }
 
 func ErrorHandler(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "error.html", nil)
+	ctx.HTML(http.StatusOK, "error", nil)
+}
+
+func SignUpHandler(ctx *gin.Context) {
+	ctx.HTML(http.StatusOK, "form", gin.H{
+		"action": "signup",
+		"title": "SignUp",
+	})
+}
+
+func LoginHandler(ctx *gin.Context) {
+	ctx.HTML(http.StatusOK, "form", gin.H{
+		"action": "login",
+		"title": "Login",
+	})
 }
 
 func CreateHandler(ctx *gin.Context) {
@@ -64,7 +78,7 @@ func CreateHandler(ctx *gin.Context) {
 	if success {
 		ctx.Redirect(http.StatusFound, fmt.Sprintf("/%s", key))
 	} else {
-		ctx.HTML(http.StatusOK, "error.html", nil)
+		ctx.Redirect(http.StatusFound, "/error.html")
 	}
 
 }
@@ -150,7 +164,7 @@ func KeyHandler(ctx *gin.Context) {
 	// convert created_at field to human readable text
 	layout := "2006-01-02 15:04:05"
 
-	ctx.HTML(http.StatusOK, "text.html", gin.H{
+	ctx.HTML(http.StatusOK, "text", gin.H{
 		"key":      key,
 		"content":  values["ptext"],
 		"username": username,

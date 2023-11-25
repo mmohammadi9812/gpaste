@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ block "title" . }}GPaste{{ end }}</title>
+  <link rel="stylesheet" type="text/css" href="styles.css" />
+  {{ block "css" . }}{{ end }}
+  {{ block "script" . }}{{ end }}
+</head>
+
+<body>
+  <header>
+    <h1>Pastebin</h1>
+    <nav>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/signup.html">Sign Up</a></li>
+        <li><a href="/login.html">Log In</a></li>
+      </ul>
+    </nav>
+  </header>
+  {{ block "body" . }}{{ end }}
+</body>
+
+</html>

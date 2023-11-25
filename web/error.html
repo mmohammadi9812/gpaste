@@ -1,19 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
+{{ template "base.html" . }}
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Oops!</title>
-</head>
+{{ define "title" }}Oops!{{ end }}
 
-<body>
-    <main>
-        <h1 style="color: #d9534f;">Oops! Page Not Found</h1>
+{{ define "body" }}
+<main>
+  <h1 style="color: #d9534f;">Oops! Page Not Found</h1>
 
-        <p>The page you are looking for could not be found.</p>
+  <p>The page you are looking for could not be found.</p>
 
-        <p>Please check the URL or return to the <a href="/">homepage</a>.</p>
+  <p>Please check the URL or return to the <a href="/">homepage</a>.</p>
 
-      </main>
-</body>
+</main>
+{{ end }}
