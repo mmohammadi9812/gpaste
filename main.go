@@ -2,49 +2,41 @@ package main
 
 import (
 	"log"
-	"sync"
 
-	"github.com/redis/go-redis/v9"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"git.sr.ht/~mmohammadi9812/gpaste/controller"
 )
-
-const (
-	PasteText = iota
-	PasteImage
-)
-
-// TODO: https://github.com/envoyproxy/ratelimit or https://github.com/sethvargo/go-limiter
-
-type Form struct {
-	Text string `form:"text"`
-}
 
 var (
-	kgs KGS
-	rdb *redis.Client
-	wg  sync.WaitGroup
+	router *gin.Engine
 )
 
-func main() {
+func setup() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	rdb = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
-	})
-
-	wg.Add(1)
-	go (func() {
-		kgs.Init()
-		wg.Done()
-	})()
-	defer kgs.Close()
-
-	r := getGin()
-
-	if err := r.Run(":3000"); err != nil {
+	err := godotenv.Load(".env")
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	wg.Wait()
+	go (func(){
+		err = controller.Init()
+		if err != nil {
+			log.Fatal(err)
+		}
+	})()
+
+	router = getGin()
+}
+
+func main() {
+	// TODO: check if this makes error
+	setup()
+
+	if err := router.Run(":3000"); err != nil {
+		log.Printf("error while running server: %v\n", err)
+	}
+
+	defer controller.Close()
 }

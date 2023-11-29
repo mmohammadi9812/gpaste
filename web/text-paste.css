@@ -11,3 +11,11 @@
     color: #666;
     margin-top: 10px;
 }
+
+#paste-image {
+    max-width: 100%; /* Ensure the image doesn't exceed its container */
+    height: auto;    /* Maintain aspect ratio */
+    display: block;  /* Remove any default inline styles */
+    margin-top: 10px; /* Adjust spacing */
+}
+

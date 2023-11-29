@@ -1,14 +1,136 @@
+{{/* https://codepen.io/Wendy-Ho/pen/MWWBvmd */}}
 {{ template "base.html" . }}
 
+{{ define "css" }}
+<link rel="stylesheet" type="text/css" href="/assets/index.css" />
+{{ end }}
+
 {{ define "body" }}
+
 <main>
-  <h2>New Paste</h2>
+    <h2>New Paste</h2>
 
-  <form action="/api/create" method="post">
-    <label for="paste-text">Paste:</label>
-    <textarea name="text" id="paste-text" autocomplete="off"></textarea>
+    <div class="warpper">
+        <input class="radio" id="one" name="group" type="radio" checked>
+        <input class="radio" id="two" name="group" type="radio">
+        <div class="tabs">
+            <label class="tab" id="one-tab" for="one">Text</label>
+            <label class="tab" id="two-tab" for="two">Image</label>
+        </div>
+        <div class="panels">
+            <div class="panel" id="one-panel">
+                <form action="/api/create/text" method="post" id="text-form">
+                    <div id="text-section">
+                        <label for="paste-text">Paste:</label>
+                        <textarea name="text" id="paste-text" autocomplete="off"></textarea>
+                    </div>
+                    <div id="language-container">
+                        <label for="language">Select Language:</label>
+                        <select name="language" id="language">
+                            <option value="plain" selected>Plain Text</option>
+                            <option value="c">C</option>
+                            <option value="cpp">C++</option>
+                            <option value="python">Python</option>
+                            <option value="js">JavaScript</option>
+                        </select>
+                    </div>
 
-    <button id="submit-paste">Submit</button>
-  </form>
+                    <div id="expiration-container">
+                        <label for="expiration">Select Expiration Date:</label>
+                        <select name="expiration" id="expiration">
+                            <option value="0.5">30 Minutes</option>
+                            <option value="1">1 Hour</option>
+                            <option value="12">12 Hours</option>
+                            <option value="24" selected>1 Day</option>
+                            <option value="168">1 Week</option>
+                            <option value="720">1 Month</option>
+                            <option value="8760">1 Year</option>
+                            <option value="0">Indefinitely</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" id="submit-paste">Submit</button>
+                </form>
+            </div>
+            <div class="panel" id="two-panel">
+                <form action="/api/create/image" method="post" enctype="multipart/form-data" id="image-form">
+                    <div class="file-upload" id="file-section">
+                        <input type="file" name="image" id="image" accept="image/jpeg, image/png">
+                    </div>
+
+                    <!-- Optional: Placeholder for image preview -->
+                    <img id="preview" alt="Image Preview" style="max-width: 100%; display: none;">
+
+
+                    <label for="expiration">Select Expiration Date:</label>
+                    <select name="expiration" id="expiration">
+                        <option value="0.5">30 Minutes</option>
+                        <option value="1">1 Hour</option>
+                        <option value="12">12 Hours</option>
+                        <option value="24">1 Day</option>
+                        <option value="168">1 Week</option>
+                        <option value="720">1 Month</option>
+                        <option value="8760">1 Year</option>
+                        <option value="0">Indefinitely</option>
+                    </select>
+
+                    <button type="submit" id="submit-image">Submit Image</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
 </main>
+
+<script>
+    const fileUpload = document.getElementById('file-section');
+    const fileInput = document.getElementById('image');
+
+    fileUpload.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        fileUpload.classList.add('active');
+    });
+
+    fileUpload.addEventListener('dragleave', function () {
+        fileUpload.classList.remove('active');
+    });
+
+    fileUpload.addEventListener('drop', function (e) {
+        e.preventDefault();
+        fileUpload.classList.remove('active');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            // Set the files using the FileList API
+            fileInput.files = files;
+
+            // Optional: Display the image
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                // Assuming you have an image element with the id "preview"
+                const preview = document.getElementById('preview');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(files[0]);
+        }
+    });
+
+    // Optional: Handle file input change (e.g., for displaying the image when selecting via file input)
+    fileInput.addEventListener('change', function () {
+        const files = fileInput.files;
+        if (files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                // Assuming you have an image element with the id "preview"
+                const preview = document.getElementById('preview');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(files[0]);
+        }
+    });
+</script>
+
 {{ end }}

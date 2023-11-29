@@ -2,9 +2,11 @@ package main
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/gin-contrib/multitemplate"
 	"github.com/gin-gonic/gin"
+	"git.sr.ht/~mmohammadi9812/gpaste/controller"
 )
 
 func customRenderer() multitemplate.Renderer {
@@ -27,10 +29,8 @@ func getGin() *gin.Engine {
 		log.Fatal(err)
 	}
 
-	// serve static files (for now, it's only css)
-	r.StaticFile("/styles.css", "./web/styles.css")
-	r.StaticFile("/text-paste.css", "./web/text-paste.css")
-	r.StaticFile("/userform.css", "./web/userform.css")
+	// serve static files
+	r.StaticFS("/assets", http.Dir("web"))
 	r.StaticFile("/favicon.ico", "./web/favicon.ico")
 
 	r.HTMLRender = customRenderer()
@@ -38,20 +38,23 @@ func getGin() *gin.Engine {
 	// we don't need extra slashes
 	r.RemoveExtraSlash = true
 
-	r.GET("/error.html", ErrorHandler)
-
-	r.GET("/login.html", LoginHandler)
-
-	r.GET("/signup.html", SignUpHandler)
 
 	// controller paths
-	r.GET("/", IndexHandler)
+	r.GET("/", controller.IndexHandler)
+	r.GET("/error.html", controller.ErrorHandler)
+	r.GET("/login.html", controller.LoginHandler)
+	r.GET("/signup.html", controller.SignUpHandler)
+
 	api := r.Group("/api")
 	{
-		api.POST("/create", CreateHandler)
+		create := api.Group("/create")
+		{
+			create.POST("/text", controller.TextHandler)
+			create.POST("/image", controller.ImageHandler)
+		}
 	}
 
-	r.GET("/:key", KeyHandler)
+	r.GET("/:key", controller.KeyHandler)
 
 	return r
 }

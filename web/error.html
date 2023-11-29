@@ -4,11 +4,16 @@
 
 {{ define "body" }}
 <main>
+
+  {{ with "reason" }} {{ .reason }} {{ else }}
+
   <h1 style="color: #d9534f;">Oops! Page Not Found</h1>
 
   <p>The page you are looking for could not be found.</p>
 
   <p>Please check the URL or return to the <a href="/">homepage</a>.</p>
+
+  {{ end }}
 
 </main>
 {{ end }}

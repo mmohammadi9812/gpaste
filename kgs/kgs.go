@@ -1,6 +1,7 @@
-package main
+package kgs
 
 import (
+	"context"
 	"errors"
 	"log"
 	"math/rand"
@@ -8,8 +9,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/dgraph-io/ristretto"
+	// TODO: https://github.com/dtm-labs/rockscache or https://github.com/redis/rueidis
+	// "github.com/dgraph-io/ristretto"
 	"github.com/gocql/gocql"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -20,7 +23,7 @@ const (
 type KGS struct {
 	cluster *gocql.ClusterConfig
 	Session *gocql.Session
-	cache   *ristretto.Cache
+	cache   *redis.Client
 
 	lastPrefix string
 }
@@ -41,10 +44,10 @@ func (k *KGS) Init() {
 		log.Fatal(err)
 	}
 
-	k.cache, err = ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1e3,
-		MaxCost:     1 << 4,
-		BufferItems: 64,
+	k.cache = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       1,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -82,8 +85,18 @@ func (k *KGS) GenerateKeyRange() (string, gocql.UUID, error) {
 
 // GetKey retrieves an unused key from the cache or generates a new key range.
 func (k *KGS) GetKey() (string, error) {
-	keys, ok := k.cache.Get(k.lastPrefix)
-	if !ok || len(keys.([]string)) == 64 {
+	var (
+		exists int64
+		err error
+		keys []string
+	)
+
+	// FIXME: k.lastPrefix is empty
+	exists, err = k.cache.Exists(context.Background(), k.lastPrefix).Result()
+	if exists == 1 {
+		keys, err = k.cache.LRange(context.Background(), k.lastPrefix, 0, -1).Result()
+	}
+	if exists == 0 || err != nil || len(keys) == 64 {
 		var (
 			id     gocql.UUID
 			prefix string
@@ -120,14 +133,16 @@ func (k *KGS) GetKey() (string, error) {
 	for i := 0; i < len(keyChars); i++ {
 		lastByte := keyChars[rand.Intn(len(keyChars))]
 		sb.WriteByte(lastByte)
-		if slices.Contains(keys.([]string), sb.String()) {
+		if slices.Contains(keys, sb.String()) {
 			sb = strings.Builder{}
 			sb.WriteString(k.lastPrefix)
 			continue
 		} else {
 			res = sb.String()
-			keys = append(keys.([]string), res)
-			k.cache.Set(k.lastPrefix, keys.([]string), int64(len(keys.([]string))))
+			err = k.cache.RPush(context.Background(), k.lastPrefix, res).Err()
+			if err != nil {
+				return "", err
+			}
 			break
 		}
 	}

@@ -3,14 +3,18 @@
 {{ define "title" }} {{- .key -}} {{ end }}
 
 {{ define "css" }}
-  <link rel="stylesheet" type="text/css" href="/text-paste.css" />
+<link rel="stylesheet" type="text/css" href="/assets/text-paste.css" />
 {{ end }}
 
 {{ define "body" }}
 <main>
-  <pre id="paste-content">
-          {{- .content -}}
-        </pre>
+  {{ if eq .ptype 0 }}
+    <pre id="paste-content">
+      {{- .content -}}
+    </pre>
+  {{ else }}
+    <img id="paste-image" src="{{ .s3_url }}" alt="Pasted Image">
+  {{ end }}
 
   <div id="paste-details">
     <p>Posted by <b>{{- .username -}}</b> on <i>{{ .date }}</i></p>

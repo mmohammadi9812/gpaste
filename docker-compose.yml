@@ -50,3 +50,15 @@ services:
       - "6379:6379"
     volumes:
       - ./data/redis/:/bitnami/redis/data/:rw
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    command: server /data --console-address ":9090"
+    env_file:
+      - minio.env
+    ports:
+      - "9001:9000"
+      - "9091:9090"
+    volumes:
+      - ./data/minio:/data:rw
