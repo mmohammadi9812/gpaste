@@ -14,7 +14,7 @@ func customRenderer() multitemplate.Renderer {
 	r.AddFromFiles("form", "web/base.html", "web/userform.html")
 	r.AddFromFiles("index", "web/base.html", "web/index.html")
 	r.AddFromFiles("error", "web/base.html", "web/error.html")
-	r.AddFromFiles("text", "web/base.html", "web/text.html")
+	r.AddFromFiles("view", "web/base.html", "web/paste-view.html")
 
 	return r
 }
@@ -52,6 +52,9 @@ func getGin() *gin.Engine {
 			create.POST("/text", controller.TextHandler)
 			create.POST("/image", controller.ImageHandler)
 		}
+
+		api.POST("/signup", controller.ErrorHandler)
+		api.POST("/login", controller.ErrorHandler)
 	}
 
 	r.GET("/:key", controller.KeyHandler)

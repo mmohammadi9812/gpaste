@@ -31,6 +31,8 @@ var (
 	mc  *minio.Client
 )
 
+// TODO: change log.Fatal lines, not all errors are fatal
+
 type TextForm struct {
 	Text       string `form:"text"`
 	Language   string `form:"language"`
@@ -72,11 +74,42 @@ func LoginHandler(ctx *gin.Context) {
 	})
 }
 
-func TextHandler(ctx *gin.Context) {
-	var f TextForm
-	if err := ctx.Bind(&f); err != nil {
+func CreateUsetHandler(ctx *gin.Context) {
+	if err := saveUser(ctx); err != nil {
 		ctx.Set("reason", err.Error())
-		ctx.Redirect(http.StatusFound, "/error.html")
+		ctx.Redirect(http.StatusOK, "/error.html")
+	} else {
+		ctx.Redirect(http.StatusOK, "/login.html")
+	}
+}
+
+func GetUserHandler(ctx *gin.Context) {
+	// FIXME: getUser is not implemented actually
+	if err := getUser(ctx); err != nil {
+		ctx.Set("reason", err.Error())
+		ctx.Redirect(http.StatusOK, "/error.html")
+	} else {
+		ctx.Redirect(http.StatusOK, "/")
+	}
+}
+
+func saveContent(ctx *gin.Context, dataType int) {
+	var form any
+	switch dataType {
+	case PasteText:
+		var tf TextForm
+		if err := ctx.Bind(&tf); err != nil {
+			log.Fatal(err)
+		}
+		form = tf
+	case PasteImage:
+		var imf ImageForm
+		if err := ctx.ShouldBind(&imf); err != nil {
+			log.Fatal(err)
+		}
+		form = imf
+	default:
+		log.Fatalln("saveContent was called with wrong anguments")
 	}
 
 	key, err := kg.GetKey()
@@ -103,8 +136,21 @@ func TextHandler(ctx *gin.Context) {
 			return
 		}
 
+		var values = []any{uuid, dataType}
+		switch dataType {
+		case PasteText:
+			values = append(values, form.(TextForm).Text, nil)
+		case PasteImage:
+			objectURL, err := putToS3(ctx, form.(ImageForm).Image)
+			if err != nil {
+				ctx.Set("reason", err.Error())
+				ctx.Redirect(http.StatusFound, "/error.html")
+			}
+			values = append(values, nil, objectURL)
+		}
+		values = append(values, nil, time.Now(), time.Now())
 		err = kg.Session.Query("INSERT INTO paste.Paste (id, ptype, ptext, s3_url, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			uuid, PasteText, f.Text, nil, nil, time.Now(), time.Now()).WithContext(ctx).Exec()
+			values...).WithContext(ctx).Exec()
 		if err != nil {
 			done <- false
 			return
@@ -123,63 +169,12 @@ func TextHandler(ctx *gin.Context) {
 	}
 }
 
-// FIXME: image handler & text handler share almost same code
+func TextHandler(ctx *gin.Context) {
+	saveContent(ctx, PasteText)
+}
+
 func ImageHandler(ctx *gin.Context) {
-	var f ImageForm
-	if err := ctx.ShouldBind(&f); err != nil {
-		ctx.HTML(http.StatusOK, "/error.html", gin.H{
-			"reason": err.Error(),
-		})
-	}
-
-	objectURL, err := putToS3(ctx, f.Image)
-	if err != nil {
-		ctx.Set("reason", err.Error())
-		ctx.Redirect(http.StatusFound, "/error.html")
-	}
-
-	key, err := kg.GetKey()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	uuid := gocql.MustRandomUUID()
-
-	done := make(chan bool)
-
-	go (func() {
-		err = rdb.Set(ctx, key, uuid.String(), 0).Err()
-		if err != nil {
-			done <- false // Indicate insertion failure
-			return
-		}
-
-		err = kg.Session.Query("INSERT INTO paste.PasteKeys (key, paste_id, expires_at) VALUES (?, ?, ?)",
-			key, uuid, nil).WithContext(ctx).Exec()
-
-		if err != nil {
-			done <- false
-			return
-		}
-
-		err = kg.Session.Query("INSERT INTO paste.Paste (id, ptype, ptext, s3_url, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			uuid, PasteImage, nil, objectURL, nil, time.Now(), time.Now()).WithContext(ctx).Exec()
-		if err != nil {
-			done <- false
-			return
-		}
-
-		done <- true
-	})()
-
-	success := <-done // Wait for signal and check for success
-
-	if success {
-		ctx.Redirect(http.StatusFound, fmt.Sprintf("/%s", key))
-	} else {
-		ctx.Set("reason", err.Error())
-		ctx.Redirect(http.StatusFound, "/error.html")
-	}
+	saveContent(ctx, PasteImage)
 }
 
 func KeyHandler(ctx *gin.Context) {
@@ -210,11 +205,10 @@ func KeyHandler(ctx *gin.Context) {
 	// convert created_at field to human readable text
 	layout := "2006-01-02 15:04:05"
 
-	// FIXME: image pastes not working
-	ctx.HTML(http.StatusOK, "text", gin.H{
+	ctx.HTML(http.StatusOK, "view", gin.H{
 		"key":      key,
 		"content":  values["ptext"],
-		"s3_url": values["s3_url"],
+		"s3_url":   values["s3_url"],
 		"username": username,
 		"date":     values["created_at"].(time.Time).Format(layout),
 	})

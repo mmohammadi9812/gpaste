@@ -16,7 +16,13 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
+
+type User struct {
+	Email    string `form:"email" binding:"required"`
+	Password string `form:"password" binding:"required"`
+}
 
 var (
 	wg           sync.WaitGroup
@@ -29,18 +35,6 @@ var (
 				"Principal": "*",
 				"Resource":  [1]string{fmt.Sprintf("arn:aws:s3:::%s/*", BucketName)},
 			},
-			// map[string]any{
-			// 	"Sid":       "DenyBucketOverwrite",
-			// 	"Effect":    "Deny",
-			// 	"Principal": "*",
-			// 	"Action":    [2]string{"s3:DeleteObject", "s3:PutObject"},
-			// 	"Resource":  [1]string{fmt.Sprintf("arn:aws:s3:::%s/*", BucketName)},
-			// 	"Condition": map[string]any{
-			// 		"StringEquals": map[string]any{
-			// 			"s3:ExistingObjectTag/*": "overwrite",
-			// 		},
-			// 	},
-			// },
 		},
 	}
 )
@@ -164,9 +158,10 @@ func getUsernameFromId(id string) string {
 }
 
 func Init() (err error) {
+	rpass := os.Getenv("REDIS_PASSWORD")
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
-		Password: "",
+		Password: rpass,
 		DB:       0,
 	})
 
@@ -195,4 +190,44 @@ func Close() {
 	fmt.Print("Closing redis & key generation service ...")
 	rdb.Close()
 	kg.Close()
+}
+
+func passwdHash(passwd string) (string, error) {
+	hashBytes, err := bcrypt.GenerateFromPassword([]byte(passwd), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+
+	return string(hashBytes), nil
+}
+
+func saveUser(ctx *gin.Context) (err error) {
+	var u User
+	if err = ctx.Bind(&u); err != nil {
+		return
+	}
+
+	uid := gocql.MustRandomUUID()
+	hash, err := passwdHash(u.Password)
+	if err != nil {
+		return
+	}
+
+	err = kg.Session.Query("INSERT INTO Paste.User (id, username, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+		uid, u.Email, hash, time.Now(), time.Now()).WithContext(ctx).Exec()
+	if err != nil {
+		return
+	}
+
+	return nil
+}
+
+func getUser(ctx *gin.Context) (err error) {
+	var u User
+	if err = ctx.Bind(&u); err != nil {
+		return
+	}
+
+	//TODO: finish this function
+	return fmt.Errorf("not implemented")
 }

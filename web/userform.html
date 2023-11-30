@@ -55,6 +55,7 @@
         const isValid = password.length >= 8 && hasUppercase && hasLowercase && hasNumber && hasSpecial;
 
         if (!isValid) {
+            // FIXME: change error message based on real error
             passwordError.textContent = "Password must be at least 8 characters long";
         } else {
             passwordError.textContent = "";

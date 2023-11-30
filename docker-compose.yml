@@ -10,13 +10,18 @@ services:
     environment:
       - CASSANDRA_SEEDS=cassandra,cassandra2
       - CASSANDRA_CLUSTER_NAME=cassandra-cluster
-      - CASSANDRA_PASSWORD=cassandra
+      - CASSANDRA_PASSWORD_SEEDER=yes
+      - CASSANDRA_AUTHENTICATOR=PasswordAuthenticator
+      - CASSANDRA_USER=$CASSANDRA_USER
+      - CASSANDRA_PASSWORD=$CASSANDRA_PASSWORD
       # By default, Cassandra autodetects the available host memory and takes as much as it can.
       # Therefore, memory options are mandatory if multiple Cassandras are launched in the same node.
       - MAX_HEAP_SIZE=1G
       - HEAP_NEWSIZE=200M
+
     volumes:
-      - ./scripts/init-db.cql:/scripts/init-db.cql
+      # - ./scripts/init-db.cql:/scripts/init-db.cql
+      - ./scripts/init-db.cql:/docker-entrypoint-initdb.d/init-db.cql
       - ./data/cassandra1/:/bitnami/:rw
 
   cassandra2:
@@ -28,10 +33,12 @@ services:
     environment:
       - CASSANDRA_SEEDS=cassandra,cassandra2
       - CASSANDRA_CLUSTER_NAME=cassandra-cluster
-      - CASSANDRA_PASSWORD=cassandra
+      - CASSANDRA_AUTHENTICATOR=PasswordAuthenticator
+      - CASSANDRA_USER=$CASSANDRA_USER
+      - CASSANDRA_PASSWORD=$CASSANDRA_PASSWORD
       # By default, Cassandra autodetects the available host memory and takes as much as it can.
       # Therefore, memory options are mandatory if multiple Cassandras are launched in the same node.
-      - MAX_HEAP_SIZE=800M
+      - MAX_HEAP_SIZE=1G
       - HEAP_NEWSIZE=200M
     depends_on:
       cassandra:
@@ -42,10 +49,8 @@ services:
   redis:
     image: bitnami/redis:7.2
     container_name: redis
-#    command: redis-server --save 20 1 --loglevel warning --protected-mode no
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+      - REDIS_PASSWORD=$REDIS_PASSWORD
     ports:
       - "6379:6379"
     volumes:
@@ -55,8 +60,9 @@ services:
     image: quay.io/minio/minio
     container_name: minio
     command: server /data --console-address ":9090"
-    env_file:
-      - minio.env
+    environment:
+      - MINIO_ROOT_USER=$MINIO_ROOT_USER
+      - MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD
     ports:
       - "9001:9000"
       - "9091:9090"

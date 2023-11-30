@@ -9,8 +9,6 @@ import (
 	"slices"
 	"strings"
 
-	// TODO: https://github.com/dtm-labs/rockscache or https://github.com/redis/rueidis
-	// "github.com/dgraph-io/ristretto"
 	"github.com/gocql/gocql"
 	"github.com/redis/go-redis/v9"
 )
@@ -31,10 +29,11 @@ type KGS struct {
 func (k *KGS) Init() {
 	var err error
 
+	cuser, cpass := os.Getenv("CASSANDRA_USER"), os.Getenv("CASSANDRA_PASSWORD")
 	k.cluster = gocql.NewCluster("localhost:9042")
 	k.cluster.Authenticator = gocql.PasswordAuthenticator{
-		Username: "cassandra",
-		Password: "cassandra",
+		Username: cuser,
+		Password: cpass,
 	}
 	k.cluster.Keyspace = "paste"
 	k.cluster.Consistency = gocql.Quorum
@@ -44,9 +43,10 @@ func (k *KGS) Init() {
 		log.Fatal(err)
 	}
 
+	rpass := os.Getenv("REDIS_PASSWORD")
 	k.cache = redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
-		Password: "",
+		Password: rpass,
 		DB:       1,
 	})
 	if err != nil {
@@ -91,7 +91,6 @@ func (k *KGS) GetKey() (string, error) {
 		keys []string
 	)
 
-	// FIXME: k.lastPrefix is empty
 	exists, err = k.cache.Exists(context.Background(), k.lastPrefix).Result()
 	if exists == 1 {
 		keys, err = k.cache.LRange(context.Background(), k.lastPrefix, 0, -1).Result()
