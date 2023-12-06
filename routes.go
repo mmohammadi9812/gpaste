@@ -4,9 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"git.sr.ht/~mmohammadi9812/gpaste/controller"
 	"github.com/gin-contrib/multitemplate"
 	"github.com/gin-gonic/gin"
-	"git.sr.ht/~mmohammadi9812/gpaste/controller"
 )
 
 func customRenderer() multitemplate.Renderer {
@@ -38,12 +38,16 @@ func getGin() *gin.Engine {
 	// we don't need extra slashes
 	r.RemoveExtraSlash = true
 
+	authMiddleware, err := controller.AuthMiddleware()
+	if err != nil {
+		log.Fatalf("error while creating auth middleware: %v\n", err.Error())
+	}
 
 	// controller paths
-	r.GET("/", controller.IndexHandler)
-	r.GET("/error.html", controller.ErrorHandler)
-	r.GET("/login.html", controller.LoginHandler)
-	r.GET("/signup.html", controller.SignUpHandler)
+	r.GET("/", controller.IndexPage)
+	r.GET("/error.html", controller.ErrorPage)
+	r.GET("/login.html", controller.LoginPage)
+	r.GET("/signup.html", controller.SignUpPage)
 
 	api := r.Group("/api")
 	{
@@ -53,8 +57,16 @@ func getGin() *gin.Engine {
 			create.POST("/image", controller.ImageHandler)
 		}
 
-		api.POST("/signup", controller.ErrorHandler)
-		api.POST("/login", controller.ErrorHandler)
+		api.POST("/signup", controller.CreateUserHandler)
+		api.POST("/login", authMiddleware.LoginHandler)
+		api.GET("/refresh_token", authMiddleware.RefreshHandler)
+		api.GET("/logout", authMiddleware.LogoutHandler)
+
+		dash := api.Group("/dashboard")
+		dash.Use(authMiddleware.MiddlewareFunc())
+		{
+			dash.GET("/:username", controller.DashboardHandler)
+		}
 	}
 
 	r.GET("/:key", controller.KeyHandler)

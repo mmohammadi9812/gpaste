@@ -31,7 +31,6 @@ func setup() {
 }
 
 func main() {
-	// TODO: check if this makes error
 	setup()
 
 	if err := router.Run(":3000"); err != nil {

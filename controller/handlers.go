@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -9,9 +8,10 @@ import (
 
 	"git.sr.ht/~mmohammadi9812/gpaste/kgs"
 	"github.com/gin-gonic/gin"
-	"github.com/gocql/gocql"
 	"github.com/minio/minio-go/v7"
 	"github.com/redis/go-redis/v9"
+
+	jwt "github.com/appleboy/gin-jwt/v2"
 )
 
 const (
@@ -44,11 +44,11 @@ type ImageForm struct {
 	Expiration float32               `form:"expiration"`
 }
 
-func IndexHandler(ctx *gin.Context) {
+func IndexPage(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "index", nil)
 }
 
-func ErrorHandler(ctx *gin.Context) {
+func ErrorPage(ctx *gin.Context) {
 	reason, ok := ctx.Get("reason")
 	var obj any = nil
 	if ok {
@@ -60,112 +60,26 @@ func ErrorHandler(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "error", obj)
 }
 
-func SignUpHandler(ctx *gin.Context) {
+func SignUpPage(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "form", gin.H{
 		"action": "signup",
 		"title":  "SignUp",
 	})
 }
 
-func LoginHandler(ctx *gin.Context) {
+func LoginPage(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "form", gin.H{
 		"action": "login",
 		"title":  "Login",
 	})
 }
 
-func CreateUsetHandler(ctx *gin.Context) {
+func CreateUserHandler(ctx *gin.Context) {
 	if err := saveUser(ctx); err != nil {
 		ctx.Set("reason", err.Error())
 		ctx.Redirect(http.StatusOK, "/error.html")
 	} else {
 		ctx.Redirect(http.StatusOK, "/login.html")
-	}
-}
-
-func GetUserHandler(ctx *gin.Context) {
-	// FIXME: getUser is not implemented actually
-	if err := getUser(ctx); err != nil {
-		ctx.Set("reason", err.Error())
-		ctx.Redirect(http.StatusOK, "/error.html")
-	} else {
-		ctx.Redirect(http.StatusOK, "/")
-	}
-}
-
-func saveContent(ctx *gin.Context, dataType int) {
-	var form any
-	switch dataType {
-	case PasteText:
-		var tf TextForm
-		if err := ctx.Bind(&tf); err != nil {
-			log.Fatal(err)
-		}
-		form = tf
-	case PasteImage:
-		var imf ImageForm
-		if err := ctx.ShouldBind(&imf); err != nil {
-			log.Fatal(err)
-		}
-		form = imf
-	default:
-		log.Fatalln("saveContent was called with wrong anguments")
-	}
-
-	key, err := kg.GetKey()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	uuid := gocql.MustRandomUUID()
-
-	done := make(chan bool)
-
-	go (func() {
-		err = rdb.Set(ctx, key, uuid.String(), 0).Err()
-		if err != nil {
-			done <- false // Indicate insertion failure
-			return
-		}
-
-		err = kg.Session.Query("INSERT INTO paste.PasteKeys (key, paste_id, expires_at) VALUES (?, ?, ?)",
-			key, uuid, nil).WithContext(ctx).Exec()
-
-		if err != nil {
-			done <- false
-			return
-		}
-
-		var values = []any{uuid, dataType}
-		switch dataType {
-		case PasteText:
-			values = append(values, form.(TextForm).Text, nil)
-		case PasteImage:
-			objectURL, err := putToS3(ctx, form.(ImageForm).Image)
-			if err != nil {
-				ctx.Set("reason", err.Error())
-				ctx.Redirect(http.StatusFound, "/error.html")
-			}
-			values = append(values, nil, objectURL)
-		}
-		values = append(values, nil, time.Now(), time.Now())
-		err = kg.Session.Query("INSERT INTO paste.Paste (id, ptype, ptext, s3_url, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			values...).WithContext(ctx).Exec()
-		if err != nil {
-			done <- false
-			return
-		}
-
-		done <- true
-	})()
-
-	success := <-done // Wait for signal and check for success
-
-	if success {
-		ctx.Redirect(http.StatusFound, fmt.Sprintf("/%s", key))
-	} else {
-		ctx.Set("reason", err.Error())
-		ctx.Redirect(http.StatusFound, "/error.html")
 	}
 }
 
@@ -212,4 +126,13 @@ func KeyHandler(ctx *gin.Context) {
 		"username": username,
 		"date":     values["created_at"].(time.Time).Format(layout),
 	})
+}
+
+func DashboardHandler(ctx *gin.Context) {
+	claims := jwt.ExtractClaims(ctx)
+	username := claims[identityKey]
+	log.Println(username)
+
+	// FIXME: render dashboard
+	panic("unimplemtnted")
 }

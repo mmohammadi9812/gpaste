@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS paste.User (
     updated_at timestamp
 );
 
+ALTER TABLE paste.USER ADD IF NOT EXISTS first_name text;
+ALTER TABLE paste.USER ADD IF NOT EXISTS last_name text;
+
 CREATE TABLE IF NOT EXISTS paste.Paste (
     id uuid PRIMARY KEY,
     ptype int,
