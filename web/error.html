@@ -5,7 +5,7 @@
 {{ define "body" }}
 <main>
 
-  {{ with "reason" }} {{ .reason }} {{ else }}
+  {{ if .reason }} {{ .reason }} {{ else }}
 
   <h1 style="color: #d9534f;">Oops! Page Not Found</h1>
 

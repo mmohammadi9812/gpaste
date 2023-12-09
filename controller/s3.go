@@ -27,7 +27,7 @@ var (
 )
 
 func ensureBucket(ctx context.Context) (err error) {
-	err = mc.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{Region: BucketLoc})
+	err = mc.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{Region: BucketLoc, ObjectLocking: true})
 	if err != nil {
 		// Check to see if we already own this bucket (which happens if you run this twice)
 		exists, err := mc.BucketExists(ctx, BucketName)
@@ -35,14 +35,14 @@ func ensureBucket(ctx context.Context) (err error) {
 			return err
 		}
 	} else {
-		// set lock for new bucket
-		objectRetentionMode := minio.Compliance
-		lockValidity := uint(30)
-		lockUnit := minio.Days
-		err = mc.SetObjectLockConfig(ctx, BucketName, &objectRetentionMode, &lockValidity, &lockUnit)
-		if err != nil {
-			return err
-		}
+		// TODO: extended settings for bucket locking
+		// objectRetentionMode := minio.Compliance
+		// lockValidity := uint(30)
+		// lockUnit := minio.Days
+		// err = mc.SetObjectLockConfig(ctx, BucketName, &objectRetentionMode, &lockValidity, &lockUnit)
+		// if err != nil {
+		// 	return err
+		// }
 
 		// set policy for new bucket
 		policy, err := json.Marshal(BucketPolicy)

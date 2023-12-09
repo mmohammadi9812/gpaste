@@ -2,10 +2,11 @@ package main
 
 import (
 	"log"
+	"os"
 
+	"git.sr.ht/~mmohammadi9812/gpaste/controller"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"git.sr.ht/~mmohammadi9812/gpaste/controller"
 )
 
 var (
@@ -33,7 +34,12 @@ func setup() {
 func main() {
 	setup()
 
-	if err := router.Run(":3000"); err != nil {
+	port, ok := os.LookupEnv("GPASTE_PORT")
+	if !ok {
+		port = "3000"
+	}
+
+	if err := router.Run(":" + port); err != nil {
 		log.Printf("error while running server: %v\n", err)
 	}
 

@@ -12,17 +12,26 @@
 <main>
     <h1 style="text-align: center; color: #333;">{{ .title }}</h1>
     <div class="form-container">
-        <form action="/api/{{ .action }}" method="post" id="signup-form">
+        <form action="/api/{{ .action }}" method="post" id="{{ .action }}-form" onsubmit="validateForm()">
 
             <label for="email">Email:</label>
-            <input type="text" id="email" style="width: 300px;">
+            <input type="text" name="email" id="email" style="width: 300px;" maxlength="320">
             <div id="email-error"></div>
 
             <label for="password">Password:</label>
-            <input type="password" id="password" style="width: 300px;">
+            <input type="password" name="password" id="password" style="width: 300px;" maxlength="31">
             <div id="password-error"></div>
 
-            <button type="button" onclick="validateForm()">Signup</button>
+            {{ if eq .action "signup" }}
+            <label for="first-name">First Name:</label>
+            <input type="text" name="first-name" id="first-name" style="width: 300px;" maxlength="31">
+            <div></div>
+            <label for="last-name">Last Name:</label>
+            <input type="text" name="last-name" id="last-name" style="width: 300px;" maxlength="63">
+            <div></div>
+            {{ end }}
+
+            <button type="submit">Signup</button>
 
         </form>
     </div>
@@ -38,10 +47,14 @@
         const email = emailInput.value;
         const password = passwordInput.value;
 
+        console.debug(`email: ${email} password: ${password}`);
+
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             emailError.textContent = "Invalid email address";
+            console.debug("email regex test failed");
+            return false;
         } else {
             emailError.textContent = "";
         }
@@ -57,9 +70,14 @@
         if (!isValid) {
             // FIXME: change error message based on real error
             passwordError.textContent = "Password must be at least 8 characters long";
+            console.debug("password validation test failed");
+            return false;
         } else {
             passwordError.textContent = "";
         }
+
+        console.debug("all good");
+        return true;
     }
 </script>
 

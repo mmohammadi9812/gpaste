@@ -1,0 +1,42 @@
+{{ template "base.html" . }}
+
+{{ define "body" }}
+
+    <h2>User Pastes</h2>
+
+    {{ if .Pastes }}
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Content</th>
+                    <th>Paste URL</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Pastes }}
+                    <tr>
+                        <td>{{ if eq .PasteType 0 }}Text{{ else }}Image{{ end }}</td>
+                        <td>
+                            {{ if eq .PasteType 0 }}
+                                {{ if ge (len .Text) 80 }}{{ .Text | slice 0 80 }}...{{ else }}{{ .Text }}{{ end }}
+                            {{ else }}
+                                <!-- Display image with reduced size -->
+                                <img src="{{ .S3Url }}" alt="Image" width="50">
+                            {{ end }}
+                        </td>
+                        <td>
+                            {{/* TODO: http to https */}}
+                            <a href="http://{{ .base }}/{{ .Key }}">{{ .Key }}</a>
+                        </td>
+                        <td>{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</td>
+                    </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    {{ else }}
+        <p>No pastes available for this user.</p>
+    {{ end }}
+
+{{ end }}

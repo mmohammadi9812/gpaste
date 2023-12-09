@@ -15,7 +15,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-
 var (
 	wg sync.WaitGroup
 )
@@ -25,7 +24,7 @@ func getIdFromKey(ctx *gin.Context, key string) (id gocql.UUID, err error) {
 	strid, err = rdb.Get(ctx, key).Result()
 	if err == redis.Nil {
 		// key was not in cache
-		err = kg.Session.Query("SELECT paste_id FROM paste.PasteKeys WHERE key = ?;", key).Scan(&id)
+		err = kg.Session.Query("SELECT paste_id FROM paste.PasteKeys WHERE key = ? ALLOW FILTERING;", key).Scan(&id)
 		if err != nil {
 			return gocql.UUID{}, err
 		}
@@ -42,15 +41,16 @@ func getIdFromKey(ctx *gin.Context, key string) (id gocql.UUID, err error) {
 
 func getPasteFromId(id gocql.UUID) (map[string]interface{}, error) {
 	var s3url, ptext, userid string
-	// var userid gocql.UUID
+	var ptype int
 	var createdat time.Time
 
-	err := kg.Session.Query("SELECT ptext, s3_url, user_id, created_at FROM paste.Paste WHERE id = ?", id).Scan(&ptext, &s3url, &userid, &createdat)
+	err := kg.Session.Query("SELECT ptype, ptext, s3_url, user_id, created_at FROM paste.Paste WHERE id = ? ALLOW FILTERING;", id).Scan(&ptype, &ptext, &s3url, &userid, &createdat)
 	if err != nil {
 		return map[string]interface{}{}, fmt.Errorf("error on scanning paste queries: %v", err)
 	}
 
 	return map[string]interface{}{
+		"ptype":      ptype,
 		"ptext":      ptext,
 		"s3_url":     s3url,
 		"user_id":    userid,

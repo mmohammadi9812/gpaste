@@ -15,6 +15,7 @@ func customRenderer() multitemplate.Renderer {
 	r.AddFromFiles("index", "web/base.html", "web/index.html")
 	r.AddFromFiles("error", "web/base.html", "web/error.html")
 	r.AddFromFiles("view", "web/base.html", "web/paste-view.html")
+	r.AddFromFiles("dashboard", "web/base.html", "web/dashboard.html")
 
 	return r
 }

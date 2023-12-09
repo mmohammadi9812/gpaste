@@ -4,6 +4,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"time"
 
 	"git.sr.ht/~mmohammadi9812/gpaste/kgs"
@@ -45,7 +46,16 @@ type ImageForm struct {
 }
 
 func IndexPage(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "index", nil)
+	id, ok := ctx.Get("identityKey")
+	var obj any
+	if ok {
+		obj = gin.H{
+			"user": id,
+		}
+	} else {
+		obj = nil
+	}
+	ctx.HTML(http.StatusOK, "index", obj)
 }
 
 func ErrorPage(ctx *gin.Context) {
@@ -77,9 +87,9 @@ func LoginPage(ctx *gin.Context) {
 func CreateUserHandler(ctx *gin.Context) {
 	if err := saveUser(ctx); err != nil {
 		ctx.Set("reason", err.Error())
-		ctx.Redirect(http.StatusOK, "/error.html")
+		ctx.Redirect(http.StatusFound, "/error.html")
 	} else {
-		ctx.Redirect(http.StatusOK, "/login.html")
+		ctx.Redirect(http.StatusFound, "/login.html")
 	}
 }
 
@@ -100,7 +110,7 @@ func KeyHandler(ctx *gin.Context) {
 	}
 
 	// TODO: do we need this?
-	err = kg.Session.Query("SELECT id FROM paste.Paste WHERE id = ?", id).Exec()
+	err = kg.Session.Query("SELECT id FROM paste.Paste WHERE id = ? ALLOW FILTERING;", id).Exec()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -121,6 +131,7 @@ func KeyHandler(ctx *gin.Context) {
 
 	ctx.HTML(http.StatusOK, "view", gin.H{
 		"key":      key,
+		"ptype":    values["ptype"],
 		"content":  values["ptext"],
 		"s3_url":   values["s3_url"],
 		"username": username,
@@ -130,9 +141,23 @@ func KeyHandler(ctx *gin.Context) {
 
 func DashboardHandler(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
-	username := claims[identityKey]
-	log.Println(username)
+	username := claims[identityKey].(string)
+	pastes, err := getUserPastes(ctx, username)
+	if err != nil {
+		ctx.Set("reason", "couldn't fetch user pastes")
+		ctx.Redirect(http.StatusOK, "error")
+	}
 
-	// FIXME: render dashboard
-	panic("unimplemtnted")
+	port, ok := os.LookupEnv("GPASTE_PORT")
+	if !ok {
+		port = "3000"
+	}
+
+	APP_ENDPOINT := "localhost:" + port
+
+	// FIXME: dashboard
+	ctx.HTML(http.StatusOK, "dashboard", gin.H{
+		"base":   APP_ENDPOINT,
+		"pastes": pastes,
+	})
 }
